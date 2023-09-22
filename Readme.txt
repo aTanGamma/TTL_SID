@@ -1,3 +1,5 @@
+# All files are to be viewed with tabs = 4 spaces because Notepad++ #
+
 Credits:
 
 Physical / Simulated circuit designs - aTan (that's me)

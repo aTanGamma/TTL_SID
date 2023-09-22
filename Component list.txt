@@ -1,0 +1,110 @@
+Breadboard SID Component list per voice:
+
+
+																												Poor Stock !
+																																																		
+	┌───┬───────┬───────────────────────────┬───────────────────┬───────────────────┬───────────────────┬───────────────────┬───────────────────┬───────────────────┐
+	│#	│Type	│Description				│Part (RS)			│Price (RS Comp)	│Part (Mouser)		│Price (Mouser)		│Part (Digikey)		│Price (Digikey)	│
+	├───┼───────┼───────────────────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────┤
+	│6	│74273	│Octal D-FF w/ reset		│SN74LS273N			│£16.60 / 20		│CD74HCT273EE4		│£06.47 / 10		│SN74HCT273N		│£06.18 / 10		│
+	│	│		│							│					│					│					│					│					│					│
+	│6	│74273	│Octal D-FF w/ reset		│SN74LS273N			│£16.60 / 20		│CD74HCT273EE4		│£06.47 / 10		│SN74HCT273N		│£06.18 / 10		│
+	│	│		│							│					│					│					│					│					│					│	
+	│9	│74283	│Full Adder (4-bit)			│CD74HCT283E		│£13.20 / 25		│CD74HCT283E		│£06.25 / 10		│CD74HCT283E		│£06.82 / 10		│
+	│	│		│							│					│					│					│					│					│					│
+	│3	│7404	│Hex NOT gates				│SN74HC04N			│£12.08 / 25		│SN74HCT04NE4		│£04.59 / 10		│CD74HCT04E			│£04.30 / 10		│
+	│	│		│							│					│					│					│					│					│					│
+	│6	│7486	│Quad, dual-input XOR gates	│SN74HC86N			│£12.08 / 25		│CD74HCT86EE4		│£06.06 / 10		│CD74HCT86E			│£06.08 / 10		│
+	│	│		│							│					│					│					│					│					│					│
+	│10	│/////	│10 LED Bar (Red)			│DC-10SURKWA		│£53.12 / 20		│LTA-1000HR			│£06.75 / 10		│LTA-1000E			│£06.98 / 10		│
+	│	│		│							│					│					│					│					│					│					│
+	│7	│/////	│04 LED Bar (Red)			│KB-E100SURKW		│£05.39 / 10		│LTL-2620HR			│£09.17 / 10		│///////////		│///////////		│
+	│	│		│							│					│					│					│					│					│					│
+	│4	│DIP SW	│8-bit DIP Switch (spst)	│DS01C-254-L-08BE	│£10.58 / 21		│DS01C-254-S-08BE	│£05.30 / 10		│DS01C-254-S-08BE	│£05.70 / 10		│
+	│	│		│							│					│					│					│					│					│					│
+	│1	│741	│741 OpAmp					│UA741CP			│£02.01	/ 5			│UA741CP			│£02.09 / 5			│UA741CP			│£01.75 / 5			│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│
+	│	│		│							│					│					│					│					│					│					│	
+	└───┴───────┴───────────────────────────┴───────────────────┴───────────────────┴───────────────────┴───────────────────┴───────────────────┴───────────────────┘
+
+
+2	/////	256 Kbit EEPROM			AT28C256	£09.30 / 1	
+
+
+
+Clock circuit:
+
+#	Type	Description		Part (Digikey)			Price (Digikey)	Part (LCSC)				Price (LCSC)
+
+1	555		555 timer		TI NE555P				£00.24 / 1		HGSEMI NE555N			£00.51 / 5
+
+1	1M Pot	1MΩ Pot			P160KN2-0EC15B1MEG		£01.06 / 1		BOURNS 3386P-1-105TLF	£01.76 / 1
+
+							Rotary ↑								Thumb-trimmer ↑
+							
+							
+Breadboard - TW-E40-1020	£05.41 (Digikey)
+
+22AWG solid core wire - £15.68 https://www.amazon.co.uk/dp/B08BZKM7R5/ref=twister_B07TS2WS12?_encoding=UTF8&th=1
+
+Assorted ceramic capacitors - £08.08 https://www.amazon.co.uk/Multilayer-Monolithic-Ceramic-Capacitor-Assortment/dp/B077TQ984B/ref=sr_1_20?crid=2T9FZROXSRALQ&keywords=10nf+ceramic+capacitor&qid=1694725914&sprefix=10nf+ceramic+capacitor%2Caps%2C78&sr=8-20
+
+Assorted Resistors - £16.90 https://www.amazon.co.uk/Stemedu-Resistors-Assortment-Resistor-Raspberry/dp/B09NDFCF1K/ref=sr_1_17?crid=2PPHVELJ596Q6&keywords=resistors+assortment+kit&qid=1694807748&sprefix=resistor%2Caps%2C116&sr=8-17
+
+Assorted resistors - £11.99 https://www.amazon.co.uk/2600PCS-Resistor-Resistors-Assortment-Experiments/dp/B085BZRPTR/ref=sr_1_28?crid=2PPHVELJ596Q6&keywords=resistors+assortment+kit&qid=1694808457&sprefix=resistor%2Caps%2C116&sr=8-28
+
+Jumper wires - ~£02.95 https://www.ebay.co.uk/itm/134415494864?hash=item1f4bc9aed0:g:LF4AAOSwoHZhSjWB&amdata=enc%3AAQAIAAAA4JOPMO3emjrkN3zm1NPqJvgrbyzph0OfRkld69Mll2iprvG92WpDsNxYYxOQXZn5Ad1190hC%2FTF6wrGVcldjFyKV%2Fc%2FBPK7pGVBLxG6aYOBmdPEu7nqH%2FZ00SG2XOayLa9u%2Fbd%2FmCjulivY5WVqT%2Fz9uK2CUvmNwSumw3svXoak3GCeEbfUcY56yJx7z%2FjyTzMvYXPQjn7y7uMTCKBUO%2B3acVDSPm%2FRRDhDfo7jD%2F0kDElSwJame0DluXMZBH5kA0uTrWs%2ByScwa07j6MYSXY7MNGniNhsx4rKwrRnlMyUpr%7Ctkp%3ABk9SR_iPvqvTYg
+
+
+
+Cheat sheet:
+
+LS = Low-power Schottky TTL
+HC = Hi-speed CMOS (Can drive TTL. Can't drive ttl)
+HCT = Hi-speed CMOS TTL
+ABT/ABTE = Advanced BiCMOS TTL
+FCT = Fast CMOS Technology, TTL
+AC = Advanced CMOS (Can drive TTL. Can't drive ttl)
+ACT = Advanced CMOS TTL
+AHC = Advanced Hi-Speed CMOS
+AHCT = Advanced Hi-Speed CMOS TTL
+
+CMOS can drive TTL at 5 V, but TTL can't drive an HC chip - needs to be HCT
+
+
+
+555 timer notes:
+
+ 	              39 KΩ
+         ┌─────────\/\────────────┐               
+         │                        └─┐
+         │Gnd├──┬───_───┬──┤V+    \ │
+         │      │○      │         /<┘ 1 MΩ
+		 │		│		│		  \
+         │  ┌───┼ NE555 ┼──┤NC    │
+         │  │   │       │         │
+		 │  │   │       │         │
+  Out├───┴──<───┼       ┼─────────┤
+			│	│		│		  │
+            │   │       │		  │
+            │V+├┴───────┴─┐		  │
+			│   		  ╪ 100 nF│
+			│   		  ┴       │
+			│ 	 		 Gnd      │
+            ├─────────────────────┘
+			╪ 1 nF
+			┴
+		   Gnd
+
+Circuit from http://www.learningaboutelectronics.com/Articles/Adjustable-square-wave-generator-circuit-with-a-555-timer.php

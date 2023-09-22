@@ -1,0 +1,506 @@
+
+
+This file will contain explainers on each of the parts of the SID ( as far as I understand each bit anyway... )
+
+
+		! To properly view this file, please use a good monospace font and editor !
+
+
+General overview:
+
+
+	The SID can be broken into a number of sections as shown:
+	
+	
+	
+	┌──────────┐Saw		┌────────┐
+	│		   ├────────┤		 │
+	│		   │Pulse	│  Wave	 │							┌───────┐
+	│		   ├────────┤ Select │Analogue	┌────────┐		│C-Mixer│
+	│Oscillator│Tri		│        ├──────────┤Envelope├─╥──╥─┤	&	╞═══════>Audio Out
+	│		   ├────────┤	+	 │Signal	└────────┘ ║  ║ │Filters│
+	│		   │Noise	│  DAC   │					   ║  ║	└───────┘
+	│		   ├────────┤		 │					      ║
+	└─╥──────╥─┘		└────────┘					  Ch2 
+	  ║		 ║ 											 Ch3
+	  ║		 ║
+	
+	Ring	Sync
+	
+	
+	For clarity, only one voice is shown. All three go through the same mixer / filter
+	
+	
+	┌──────────────────┐
+════╡Oscillator Section╞═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════	
+	└──────────────────┘
+	
+Oscillator Section:
+	
+	
+	The SID uses a 24-bit phase accumulator ( PA ) for each oscillator, with a 16-bit frequency control ( FC ) register.
+	
+	This works by adding the value of the PA and FC each tick, creating a ramp function with a frequency dependent on the value in FC.
+	
+	The frequencies are spread linearly from 0 to ~3.9 KHz with a clock of 1 MHz.
+	
+	From this, the top 12 bits (O11 to 0) are taken as the oscillator output and, using some logic trickery, made into the other waveforms:
+	
+	
+	
+	
+	Saw:
+	
+	
+	just the top 12 bits as is
+	
+	
+	
+	
+	Tri:
+	
+	
+	XOR O11 with O10 - 0, then shift the result left one space to maintain the correct amplitude.
+	
+	For Osc <  2048, Tri = Osc
+	For Osc >= 2048, Tri = Osc ^ 1
+	
+	
+	
+	
+	Pulse:
+	
+	
+	The pulse output is controlled by both the Oscillator and Pulse Width (PW) registers
+	
+	The value of Osc is compared to the value of PW and the Pulse Out is determined by the output of this comparison.
+	
+	If Osc >= PW, Pulse Out = $FFF
+	If Osc <= PW, Pulse Out = $000
+	
+	My implementation is done by inverting the value of PW, then adding this to the value of Osc. ( effectively performing Osc - PW - 1 )
+	
+	The carry out from this is taken as the Pulse Output.
+	
+	
+	
+	
+	Noise:
+	
+	The noise generator is a 23-bit LFSR with taps on bits 17 and 22, which are XORed togeteher as the new input
+	
+	In my implementation, since the 74273 chips default to 0000 0000, I XNOR bits 17 and 22 instead ( the opposite as the actual SID )
+	
+	Bits 0, 2, 5, 9, 11, 14, 18 and 20 are taken as outputs, with the remaining 4 bits tied to ground ( Noise = $XX0 )
+	
+	
+	
+	
+	Sync:
+	
+	Oscillator Sync is performed (in my version anyway) by resetting PA - a feature of 74273
+	
+	
+				/\						/\
+			   /  \					   /  \				 /
+			  /	   \			      /    \			/
+			 /		\          /│    /      \		   /
+			/		 \        / │   /        \		  /
+		   /		  \      /  │  /          \		 /
+		  /		       \    /   │ /			   \	/
+		 /				\  /    │/				\  /
+		/				 \/		/				 \/
+	──────────────────────────────────────────────────────────
+								↑
+						   
+							   Sync
+			
+	
+	
+	
+	
+	
+	`Ring Modulation':
+	
+	This is achieved by XORing the Ring bit with O11 before it then XORs the rest of the Tri bits.
+	
+	This has the effect of artificially inverting the position of the Triangle wave - that's why ring-mod only works on tri waves:
+	
+	
+				/\		  		           /│       /\									 			/ 		 /  	  / 	   / 		/ 
+			   /  \		   	              / │      /  \									 	 \ 	    │ \		 │ \	  │	\	   │ \	    │ \
+			  /	   \			         /  │     /    \								 	 │ 	  /	│ │    / │ │    / │ │ 	 / │ │    /	│ │  
+			 /		\          /│       /   │    /      \								 	 │ \  │	│ │	\  │ │ │ \  │ │	│ \	 │ │ │ \  │	│ │	\
+			/		 \        / │      /    │   /		 \							     	 │ │/ │	│ │	│/ │ │ │ │/	│ │	│ │/ │ │ │ │/ │	│ │	│/ 
+		   /		  \      /  │     /     │  /									   	 	 │ ││\│	│ │	││\│ │ │ ││\│ │	│ ││\│ │ │ ││\│ │ │ ││
+		  /		       \    /   \    /      │ /										  	 	 │/││││ │ │/││││ │ │/││││ │	│/││││ │ │/││││ │ │/││
+		 /				\  /	 \  /       │/										 	 	 ││││││\│ ││││││\│ │ ││││\│	││││││\│ ││││││\│ ││││
+		/				 \/       \/		/												/││││││││/││││││││/││││││││/││││││││/││││││││/││││
+	──────────────────────────────────────────────────────────	At higher frequencies	──────────────────────────────────────────────────────────
+								↑		    ↑			
+						   
+							 Ring On	Ring Off
+	
+	
+	This is `true' ring-mod, but only with a square wave
+	
+	
+	More versatile ring-mod involves the following curcuit:
+	
+	
+	o───3│Σ────────┬─►│─┬────────3│Σ───o		Needs very fast-switching diodes to work ideally
+		3│Σ		   │    │		 3│Σ			
+		3│Σ		   ─    ▼		 3│Σ			Use something like a schottky diode
+	In	3│Σ──────┐ ▲    ─ ┌──────3│Σ  Out
+		3│Σ		 │ │    │ │		 3│Σ
+		3│Σ		 │ ├─│◄─┤ │		 3│Σ
+	o───3│Σ──────<─<────┘┌<──────3│Σ───o
+				 │ └─────┘│
+				 │		  │
+				 │		  │
+				 o Driver o
+				
+	
+	This requires that the 
+	
+	
+	This has the effect of modulating the input by the carrier, sort of like multiplying by the carrier if it swung between 0 and 1
+	
+	
+		┌───┐	┌───┐	┌───┐	┌───┐							    /					/\
+		│	│	│	│	│	│	│	│							   /│			\		│ \	
+		│	│	│	│	│	│	│	│							  /	│	 	/	│\		│  \
+		│	│	│	│	│	│	│	│							 /	│	\  /│	│ \		│	\
+	    ┘	└───┘	└───┘	└───┘	└							/	└───┘\/	└───┘  \/───┘	└		This changes based on which is the 
+	──────────────────────────────────────      Produces    ──────────────────────────────────────	input/driver and their relative frequencies
+
+			/\		  /\		/\
+		   /  \		 /	\	   /  \
+		  /    \	/	 \	  /	   \
+		 /		\  /	  \	 /		\
+		/		 \/		   \/		 \
+	──────────────────────────────────────
+	
+
+	┌────────────────┐
+════╡Envelope Section╞═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+	└────────────────┘	
+	
+
+	The Envelope is bad. I will (try to) make a better one ☺
+	
+	
+	
+	The envelope needs ADSR (could add more, but that's complicated...) and a gate
+	
+	On the rising edge of Gate, the ADSR sequence will start, then hold at Sustain until the falling edge
+	
+	ADSR should each be 4 - 8 bits
+	
+	Before counting up, reset Counter to $00
+	
+	On G↑, count to $FF, clocked by value of A
+	
+	On $FF, count down by D
+
+	When Count = S, halt until G↓
+	
+	On G↓, count to $00, clocked by value of R
+	
+	
+	
+	Block Diagram:
+
+
+	┌───────┐  ┌───────┐	2-bits to show which part they envelope is on:
+	│ ADSR  │  │ ADSR  │		┌──────┬─────────┬─────────┬───────┐
+	│ Speed │  │ State │		│Value │State    │Direction│Clock? │
+	└───┬───┘  └───┬───┘        ├──────┼─────────┼─────────┼───────┤
+	    ↓          ↓			│  00  │ Attack  │   Up    │   1   │
+  Speed └─┐      ┌─┘ Direction	│  01  │ Decay   │  Down   │   1   │
+	      │      │              │  10  │ Sustain │  Halt   │   0   │
+		 ┌┴──────┴┐             │  11  │ Release │  Down   │   1   │
+		 │        │				└──────┴─────────┴─────────┴───────┘
+		 │Envelope│ SN74LS591
+		 │Counter │
+   Reset├┤        ├────┐
+		 └────────┘	   │
+			     ┌─────┴─────┐		┌────────┐
+				 │Logarithmic│      │Filter/ │
+	Osc	├────────┤			 ├──────┤        │
+				 │	  DAC    │		│Stage   │
+				 └───────────┘		└────────┘
+
+
+	
+	
+	
+	To make a nice sounding envelope, you need to have non-linear A, D and R
+	
+	^
+	│▌ 			This is more
+	│▌			like how
+	││			human hearing
+	││			works in
+	││			practise
+	││
+	│▐
+	│▐
+	│ ▌
+	│ ▌
+	│ ▐
+	│ ▐
+	│  ▌
+	│  ▐
+	│   \
+	│	 ▀▄
+	│      ▀▀▄▄
+	│          ▀▀────▄▄
+   ─┼──────────────────>
+	│
+
+
+	To do this, I will use a logarithmic DAC setup:
+	
+	
+	This is configured for constant input resistance ↓
+	
+	
+					Bit 0	  Bit 1     Bit 2            Bit 7
+					  ┬			┬		  ┬				   ┬
+					  │			│		  │				   │
+		Osc	────┬─/\/─┼───┬─/\/─┼───┬─/\/─┼─         ┬─/\/─┼─────────┬───o Out
+				│     /   │     /   │     /			 │     /		 │
+				└────/ o  └────/ o  └────/ o		 └────/ o		 │
+					   │	     │ 	       │ ─ ─ ─ ─        │  ┌─/\/─┘
+				┌─/\/──┘  ┌─/\/──┘  ┌─/\/──┘		 ┌─/\/──┘  │  
+				│		  │		    │				 │		   │
+		Gnd	────┴─────────┴─────────┴───────		 ┴─────────┴─────────o Gnd
+
+
+	
+		Gain at each stage must be 2x the last:
+		
+		dB(Stage i+1) = 2 * dB(Stage i)
+		
+		V Gain / dB = 20 * log(V out / V in),
+
+		Calculator for the resistor values (and layout): http://www.vaneijndhoven.net/jos/attenuator-calculator/index.html
+	
+	
+		An first-stage attenuation of 0.75 dB provides good linearity an a final attenuation of -192.9 dB with a maximum stage-error of +0.38 dB.
+	
+
+
+	State Logic:
+	
+	
+
+	    ─       ─
+	A	A	B	B
+	│	│	│	│   ┌──┐
+	│	O───────────┤  └┐									─   ─
+	│	│	│	│	│	├───O───────────────O─────────────┤ A & B
+	│	│	│	O───┤  ┌┘   │				│
+	│	│	│	│   └──┘    │				│
+	│	│	│	│   ┌──┐    │				│
+	│	O───────────┤  └┐	│				│				─
+	│	│	│	│   │   ├───│O──────O───────│─────────────┤ A & B
+	│	│	O───────┤  ┌┘   ││		│		│
+	│	│	│	│   └──┘    ││		│		│
+	│	│	│	│   ┌──┐    ││		│		│
+	O───────────────┤  └┐	││		│		│				    ─
+	│	│	│	│   │   ├───││──────│───────│───────O─────┤ A & B
+	│	│	│	O───┤  ┌┘   ││		│		│		│
+	│	│	│	│   └──┘    ││		│		│		│
+	│	│	│	│   ┌──┐    ││		│		│		│
+	O───────────────┤  └┐   ││		│		│		│
+	│	│	│	│   │   ├───││O─────│─O─────│───────│─────┤ A & B
+	│	│	O───────┤  ┌┘   │││		│ │		│		│
+					└──┘    │││		│ │		│		│
+							│││		│ │		│		│
+							┴┴┴		┴─┴		│		│
+							\ /		\ /		│		│
+							 │		 │		│		│
+							 │		 │		│		│
+							 ┴		 ┴		┴		┴	
+						   Clock   Count  Count	   Halt
+								   Down	  Up
+
+	
+	Using SN74LS591 as the counter:
+	
+	┌────_────┐
+	┤C1    Vcc├			
+	┤C2     C0├
+	┤C3     ¬G├
+	┤C4   RClk├
+	┤C5   ¬CEn├
+	┤C6   CClk├
+	┤C7   ¬Clr├
+	┤Gnd  ¬RCO├
+	└─────────┘
+	
+	Internally, there is the counter and an output register
+	
+	Each are clocked separately: Register = RClk; Counter = CClk
+	
+	There is a clear pin which clears the counter
+	
+	The counter has an enable pin - CEn
+	
+	
+	
+	To reset the output, pull Clr low for 1 clock and ignore current output value
+	
+	
+	
+	
+	
+	
+	
+	The state will be incremented when the counter hits certain points
+	
+	On reset, set counter and state to $00
+	
+	$00 → $FF	When C7 & C6 & C5 ... & C0
+							   ───────
+	$00 → $SS	When Counter + Sustain == 0
+
+	When Gate != 1, set State to %11
+
+
+	Timing:
+	
+	A good range (for now) is ~0.01 (near instant) to 10 seconds
+	
+	
+	This would be spread over ____ bits (currently undecided) 
+
+
+
+
+	┌──────────────┐
+════╡Filter Section╞═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+	└──────────────┘
+
+
+	The SID used a State Variable Filter, specifically set up as a Kerwin-Huelsman-Newcomb Biquad filter (from wikipedia)
+	
+	
+	   Rq           R4
+	┌──/\/─┬────────/\/────────────┐
+    │      │                C      │
+	┴	   │      HP	┌───╫──┐   │		 C
+   Gnd	   │ │\   ┬		│      │   │     ┌───╫──┐
+		   └─┤+\  │ RFr │ │\   │   │     │      │
+			 │  \─┼─/\/─┼─┤-\  │   │ RFr │ │\   │
+			 │	/ │       │  \─┴─┬─┴─/\/─┴─┤-\  │
+	o──/\/─┬─┤-/  │       │  /   │         │  \─┼─┤LP
+	   Rg  │ │/   │     ┌─┤+/    ┴         │  / │
+           │      │     ┴ │/     BP      ┌─┤+/  │
+           ├─/\/──┘    Gnd               ┴ │/   │
+           │ R2                         Gnd     │
+           │                R1                  │
+           └────────────────/\/─────────────────┘
+
+	
+			1
+	F = ────────
+		2π∙RFr∙C
+
+		         ┌      ┐
+	    ┌      ┐ │  1   │
+		│    R4│ │──────│
+	Q = │1 + ──│∙│    R1│
+		│    Rq│ │2 + ──│
+        └      ┘ │    Rg│
+                 └      ┘
+
+					R1
+	A(HP) = A(LP) = ──	(passband gain)
+					Rg
+
+
+	People seem to want an improved range of resonance (greater Q)
+	
+	Since R1 and Rg are fixed, the ratio of R4:Rq must be able to vary widely - from 0+
+	
+	R4 is easiest to adjust, with a simple DAC switching in various resistances:
+	
+	
+			Signal
+
+			   o	Hopefully this won't blow up...
+			   │
+			   │
+			├←─┴─\/\─┐	   R
+  ¬Res0 ├───┤        │
+			├──┬─────┘
+			   │
+			├←─┴─\/\─┐	  2R
+  ¬Res1 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐	  4R
+  ¬Res2 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐	  8R
+  ¬Res3 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐   16R
+  ¬Res4 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐   32R
+  ¬Res5 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐	 64R
+  ¬Res6 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐	128R
+  ¬Res7 ├───┤        │
+			├──┬─────┘
+               │
+	           │
+			   o
+			   
+			  Out
+
+	
+	When Res = 0, Q = 1 / (2 + R1/Rq )
+
+
+
+
+
+
+↑ ↓ → ←
+
+░ ▒ ▓ █
+
+▀ ▄ ▌▐ ▬
+
+║ │ ═ ─
+
+╣ ╢ ╡ ┤
+
+╠ ╟ ╞ ├
+
+╗ ╖ ╕ ┐
+
+╝ ╜ ╛ ┘
+
+╔ ╓ ╒ ┌
+
+╚ ╙ ╘ └
+
+╦ ╥ ╤ ┬
+
+╩ ╨ ╧ ┴
+
+╬ ╫ ╪ ┼

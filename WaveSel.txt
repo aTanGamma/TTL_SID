@@ -1,0 +1,150 @@
+	┌────────────────┐
+════╡General Overview╞═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+	└────────────────┘
+
+
+
+General overview:
+
+
+	The SID can be broken into a number of sections as shown:
+	
+	
+	
+	┌──────────┐Saw		┌────────┐
+	│		   ├────────┤		 │
+	│		   │Pulse	│  Wave	 │							┌───────┐
+	│		   ├────────┤ Select │Analogue	┌────────┐		│C-Mixer│
+	│Oscillator│Tri		│        ├──────────┤Envelope├─╥──╥─┤	&	╞═══════>Audio Out
+	│		   ├────────┤	+	 │Signal	└────────┘ ║  ║ │Filters│
+	│		   │Noise	│  DAC   │					   ║  ║	└───────┘
+	│		   ├────────┤		 │					      ║
+	└─╥──────╥─┘		└────────┘					  Ch2 
+	  ║		 ║ 											 Ch3
+	  ║		 ║
+	
+	Ring	Sync
+	
+	
+	For clarity, only one voice is shown. All three go through the same mixer / filter
+	
+	
+
+	┌─────────────┐
+════╡Wave Selector╞════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+	└─────────────┘
+	
+	The original wave selector was more of a weird multiplier / xor thing, meaning you could never have a true mix of Pule + Tri, for example.
+	
+	
+	
+	A better mixer would make the SID that little bit more veratile:
+	
+	
+	Pulse		┌──────────┐   	/	Rm
+	════════════╡12-bit DAC├───/ o──/\/─────┐
+				└──────────┘   │			│
+	Saw			┌──────────┐   │/	Rm	    │		  Rf
+	════════════╡12-bit DAC├───/ o──/\/─────┤      ┌──/\/──┐
+				└──────────┘   │			│	   │	   │
+	Tri			┌──────────┐   │/	Rm		│      │ │\    │
+	════════════╡12-bit DAC├───/ o──/\/─────┼──────┴─┤-\   │
+				└──────────┘   │			│		 │  \──┴────> Signal to envelope
+	Noise		┌──────────┐   │/	Rm		│		 │  /
+	════════════╡12-bit DAC├───/ o──/\/─────┤	  ┌──┤+/
+				└──────────┘   │			│	  ┴	 │/
+	'Mixed'		┌──────────┐   │/	Rm		│    Gnd
+	════════════╡12-bit DAC├───/ o──/\/─────┘
+				└──────────┘   │
+							  ┌─┘5-bit
+							   ┴
+							  Wave 
+							 Select
+							  
+	
+	12-bit DACs are available, but expensive (£7 each!), so it may be better to make one.
+	
+	
+	
+	The simplest is based on an R2R resistor ladder:
+	
+	
+			 B0    B1            Bn-2  Bn-1
+	         o     o             o     o
+	         │     │			 │     │
+			 │     │             │     │
+	         /2R   /2R           /2R   /2R
+	         \     \             \     \
+	         /     /             /     /  ┌──/\/──┐
+	         │     │             │     │  │       │
+	         │     │             │     │  │ │\    │
+	  ┌──/\/─┴─/\/─┴─/\/─ ─ ─/\/─┴─/\/─┴──┴─┤-\   │
+	  │  2R    R     R       R     R		│  \──┴────>Analogue out
+	  │										│  /
+	  └───────────────────┬─────────────────┤+/
+	    				  │			    	│/
+						  ┴		
+	                     Gnd
+	 
+	 
+	The resistors need to be as accurate as possible for a linear output, but a little deviation is ok
+	
+	The larger the better as the percentage error in each resistor is much smaller - something like R = 50 KΩ.
+	
+	E24 (± 5%z)
+		
+	1.0 & 2.0
+	
+	1.1 & 2.2
+		
+	1.2 & 2.4
+	
+	1.5 & 3.0
+	
+	1.8 & 3.6
+	
+	
+	
+	E48 doesn't have any pairings accurate enough
+	
+	
+	
+	E96 (± 1%)
+	
+	1.00 & 2.00
+	
+	1.05 & 2.10
+	
+	1.13 & 2.26
+		
+	1.37 & 2.74
+	
+	1.40 & 2.80
+	
+	1.47 & 2.94
+	
+	1.58 & 3.16
+	
+	1.62 & 3.24
+	
+	1.74 & 3.48
+	
+	1.80 & 3.60	
+
+	1.87 & 3.74
+	
+	1.96 & 3.92
+	
+	2.21 & 4.42
+	
+	2.32 & 4.64
+	
+	
+	
+	There aren't any pairings in lower E-series and these pairings are possible in higher ones.
+	
+	A large multiplier of 10 K or 100 K would be good
+	
+	
+	
+	To amplify for headphones, aim for line level - 0.5 to 1.5 V

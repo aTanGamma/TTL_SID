@@ -1,0 +1,124 @@
+	┌────────────────┐
+════╡General Overview╞═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+	└────────────────┘
+
+
+
+General overview:
+
+
+	The SID can be broken into a number of sections as shown:
+	
+	
+	
+	┌──────────┐Saw		┌────────┐
+	│		   ├────────┤		 │
+	│		   │Pulse	│  Wave	 │							┌───────┐
+	│		   ├────────┤ Select │Analogue	┌────────┐		│C-Mixer│
+	│Oscillator│Tri		│        ├──────────┤Envelope├─╥──╥─┤	&	╞═══════>Audio Out
+	│		   ├────────┤	+	 │Signal	└────────┘ ║  ║ │Filters│
+	│		   │Noise	│  DAC   │					   ║  ║	└───────┘
+	│		   ├────────┤		 │					      ║
+	└─╥──────╥─┘		└────────┘					  Ch2 
+	  ║		 ║ 											 Ch3
+	  ║		 ║
+	
+	Ring	Sync
+	
+	
+	For clarity, only one voice is shown. All three go through the same mixer / filter
+
+	┌──────────────┐
+════╡Filter Section╞═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+	└──────────────┘
+
+
+	The SID used a State Variable Filter, specifically set up as a Kerwin-Huelsman-Newcomb Biquad filter (from wikipedia)
+	
+	
+	   Rq           R4
+	┌──/\/─┬────────/\/────────────┐
+    │      │                C      │
+	┴	   │      HP	┌───╫──┐   │		 C
+   Gnd	   │ │\   ┬		│      │   │     ┌───╫──┐
+		   └─┤+\  │ RFr │ │\   │   │     │      │
+			 │  \─┼─/\/─┼─┤-\  │   │ RFr │ │\   │
+			 │	/ │       │  \─┴─┬─┴─/\/─┴─┤-\  │
+	o──/\/─┬─┤-/  │       │  /   │         │  \─┼─┤LP
+	   Rg  │ │/   │     ┌─┤+/    ┴         │  / │
+           │      │     ┴ │/     BP      ┌─┤+/  │
+           ├─/\/──┘    Gnd               ┴ │/   │
+           │ R2                         Gnd     │
+           │                R1                  │
+           └────────────────/\/─────────────────┘
+
+	
+			1
+	F = ────────
+		2π∙RFr∙C
+
+		         ┌      ┐
+	    ┌      ┐ │  1   │
+		│    R4│ │──────│
+	Q = │1 + ──│∙│    R1│
+		│    Rq│ │2 + ──│
+        └      ┘ │    Rg│
+                 └      ┘
+
+					R1
+	A(HP) = A(LP) = ──	(passband gain)
+					Rg
+
+
+	People seem to want an improved range of resonance (greater Q)
+	
+	Since R1 and Rg are fixed, the ratio of R4:Rq must be able to vary widely - from 0+
+	
+	R4 is easiest to adjust, with a simple DAC switching in various resistances:
+	
+	
+			Signal
+
+			   o	Hopefully this won't blow up...
+			   │
+			   │
+			├←─┴─\/\─┐	   R
+  ¬Res0 ├───┤        │
+			├──┬─────┘
+			   │
+			├←─┴─\/\─┐	  2R
+  ¬Res1 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐	  4R
+  ¬Res2 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐	  8R
+  ¬Res3 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐   16R
+  ¬Res4 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐   32R
+  ¬Res5 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐	 64R
+  ¬Res6 ├───┤        │
+			├──┬─────┘
+               │
+			├←─┴─\/\─┐	128R
+  ¬Res7 ├───┤        │
+			├──┬─────┘
+               │
+	           │
+			   o
+			   
+			  Out
+
+	
+	When Res = 0, Q = 1 / (2 + R1/Rq )
+

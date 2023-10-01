@@ -1,0 +1,290 @@
+	┌────────────────┐
+════╡General Overview╞═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+	└────────────────┘
+
+
+
+General overview:
+
+
+	The SID can be broken into a number of sections as shown:
+	
+	
+	
+	┌──────────┐Saw		┌────────┐
+	│		   ├────────┤		 │
+	│		   │Pulse	│  Wave	 │							┌───────┐
+	│		   ├────────┤ Select │Analogue	┌────────┐		│C-Mixer│
+	│Oscillator│Tri		│        ├──────────┤Envelope├─╥──╥─┤	&	╞═══════>Audio Out
+	│		   ├────────┤	+	 │Signal	└────────┘ ║  ║ │Filters│
+	│		   │Noise	│  DAC   │					   ║  ║	└───────┘
+	│		   ├────────┤		 │					      ║
+	└─╥──────╥─┘		└────────┘					  Ch2 
+	  ║		 ║ 											 Ch3
+	  ║		 ║
+	
+	Ring	Sync
+	
+	
+	For clarity, only one voice is shown. All three go through the same mixer / filter
+
+
+
+	┌──────────────────┐
+════╡Oscillator Section╞═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════	
+	└──────────────────┘
+	
+Oscillator Section:
+	
+	
+	The SID uses a 24-bit phase accumulator ( PA ) for each oscillator, with a 16-bit frequency control ( FC ) register.
+	
+	This works by adding the value of the PA and FC each tick, creating a ramp function with a frequency dependent on the value in FC.
+	
+	The frequencies are spread linearly from 0 to ~3.9 KHz with a clock of 1 MHz.
+	
+	From this, the top 12 bits (O11 to 0) are taken as the oscillator output and, using some logic trickery, made into the other waveforms:
+	
+
+
+		┌───────────┐	   ┌─────────┐
+	 ╔→═╡   Phase   │	   │Frequency│
+	 ║	│Accumulator├┐	  ┌┤Register │
+	 ║	└─────┬─────┘│    │└─────────┘
+     ║        │      ↓    ↓
+	 ║        │      │    │
+	 ↑		  │	    ┌┴────┴┐
+	 ║		  │		│12-bit│
+	 ║		  │		│Adder │
+	 ║		  │		└╥─────┘
+     ╚═══════←<══════╝
+              │
+              ├───┬───┬───┬───┐
+              │	  │	  │   │   │
+			  │   │   │   │   │
+              │   │   │   │   │
+              ┴   ┴   ┴   ┴   ┴
+             Saw Tri Pul Mix b19
+
+
+	
+	Saw:
+	
+	
+	just the top 12 bits as is
+
+
+
+
+
+	^
+	│
+	│           /
+	│          /
+	│         /
+	│        /
+	│       /
+	│      /
+	│     /
+	│    / 
+	│   /  
+	│  /   
+	│ /    
+	│/     
+	┼─────┬─────┬
+	
+	0	 800   FFF
+	
+	
+	
+	
+	
+	Tri:
+	
+	
+	XOR O11 with O10 - 0, then shift the result left one space to maintain the correct amplitude.
+	
+	For Osc <  2048, Tri = Osc
+	For Osc >= 2048, Tri = Osc ^ 1
+	
+	
+	
+	Original (Tri)			XORed with b11			Multiplied by 2
+	^            			^            			^            
+	│            			│            			│            
+	│           /			│           '			│     /\     
+	│          / 			│          ' 			│    ▐  ▌    
+	│         /  			│         '  			│    /  \    
+	│        /   			│        '   			│   ▐    ▌   
+	│       /    			│       '     			│   /    \    
+	│      /     			│      '     			│  ▐      ▌  
+	│     /      			│     /\     			│  /  ''  \  
+	│    /       			│    /  \    			│ ▐  '  '  ▌ 
+	│   /        			│   /    \   			│ / '    ' \ 
+	│  /         			│  /      \  			│▐ '      ' ▌
+	│ /          			│ /        \ 			│/'        '\
+	│/           			│/          \			│▌          '▌
+	┼─────┬─────┬			┼─────┬─────┬			┼─────┬─────┬
+	
+	0	 800   FFF			0	 800   FFF			0	 800   FFF
+	
+	
+							Top bit lost in			Height restored
+							processing
+
+	
+	Pulse:
+	
+	
+	The pulse output is controlled by both the Oscillator and Pulse Width (PW) registers
+	
+	The value of Osc is compared to the value of PW and the Pulse Out is determined by the output of this comparison.
+	
+	If Osc >= PW, Pulse Out = $FFF
+	If Osc <= PW, Pulse Out = $000
+	
+	My implementation is done by inverting the value of PW, then adding this to the value of Osc. ( effectively performing Osc - PW - 1 )
+	
+	The carry out from this is taken as the Pulse Output.
+
+
+	
+	 Osc Out
+	  (Pul)
+	    ┬  ┌───────────┐
+	    │  │Pulse Width│
+	    │  │ Register  │
+	    │  └┬──────────┘
+        │   │
+	    │   │
+	    │  ┌┴───────┐
+	    │  │Inverter│
+	  	│  └┬───────┘
+	    │   │
+	    │   │
+	   ┌┴───┴┐
+       │Adder│
+	   └──┬──┘
+	      │ 
+		  │ Carry Out
+		  │
+	      ┴
+	  Pulse Out
+	
+	
+	
+	Noise:
+	
+	The noise generator is a 23-bit LFSR with taps on bits 17 and 22, which are XORed togeteher as the new input
+	
+	In my implementation, since the 74273 chips default to 0000 0000, I XNOR bits 17 and 22 instead ( the opposite as the actual SID )
+	
+	Bits 0, 2, 5, 9, 11, 14, 18 and 20 are taken as outputs, with the remaining 4 bits tied to ground ( Noise = $XX0 )
+	
+	
+		 b19
+	      ┬         NewBit
+		  │        ┌──────────┐
+	      │        │     	  O	XNOR
+	      │        ↓   	     / \ 
+		┌─┴────────┴─┐ 	    ▐   ▌ 
+		│23-bit Shift│ 	    │ _ │
+		│  Register  │ 	    │/_\│
+	    └┬┬┬┬┬┬┬┬──┬┬┘ 	    └/ \┘
+		 ││││││││  │└─┤b22├──┘ │
+		 ││││││││  └──┤b17├────┘
+		 ││││││││
+		 │││││││└──┤b20├──┤N7
+	     ││││││└───┤b18├──┤N6
+	     │││││└────┤b14├──┤N5
+	     ││││└─────┤b11├──┤N4
+	     │││└──────┤b09├──┤N3
+	     ││└───────┤b05├──┤N2
+	     │└────────┤b02├──┤N1
+		 └─────────┤b00├──┤N0
+	
+	
+	Sync:
+	
+	Oscillator Sync is performed (in my version anyway) by resetting PA - a feature of 74273
+	
+	
+				/\						/\
+			   /  \					   /  \				 /
+			  /	   \			      /    \			/
+			 /		\          /│    /      \		   /
+			/		 \        / │   /        \		  /
+		   /		  \      /  │  /          \		 /
+		  /		       \    /   │ /			   \	/
+		 /				\  /    │/				\  /
+		/				 \/		/				 \/
+	──────────────────────────────────────────────────────────
+								↑
+						   
+							   Sync
+			
+	
+	
+	
+	
+	
+	'Ring Modulation':
+	
+	This is achieved by XORing the Ring bit with O11 before it then XORs the rest of the Tri bits.
+	
+	This has the effect of artificially inverting the position of the Triangle wave - that's why ring-mod only works on tri waves:
+	
+	
+				/\		  		           /│       /\									 			/ 		 /  	  / 	   / 		/ 
+			   /  \		   	              / │      /  \									 	 \ 	    │ \		 │ \	  │	\	   │ \	    │ \
+			  /	   \			         /  │     /    \								 	 │ 	  /	│ │    / │ │    / │ │ 	 / │ │    /	│ │  
+			 /		\          /│       /   │    /      \								 	 │ \  │	│ │	\  │ │ │ \  │ │	│ \	 │ │ │ \  │	│ │	\
+			/		 \        / │      /    │   /		 \							     	 │ │/ │	│ │	│/ │ │ │ │/	│ │	│ │/ │ │ │ │/ │	│ │	│/ 
+		   /		  \      /  │     /     │  /									   	 	 │ ││\│	│ │	││\│ │ │ ││\│ │	│ ││\│ │ │ ││\│ │ │ ││
+		  /		       \    /   \    /      │ /										  	 	 │/││││ │ │/││││ │ │/││││ │	│/││││ │ │/││││ │ │/││
+		 /				\  /	 \  /       │/										 	 	 ││││││\│ ││││││\│ │ ││││\│	││││││\│ ││││││\│ ││││
+		/				 \/       \/		/												/││││││││/││││││││/││││││││/││││││││/││││││││/││││
+	──────────────────────────────────────────────────────────	At higher frequencies	──────────────────────────────────────────────────────────
+								↑		    ↑			
+						   
+							 Ring On	Ring Off
+	
+	
+	This is 'true' ring-mod, but only with a square wave
+	
+	
+	More versatile ring-mod involves the following curcuit:
+	
+	
+	o───3│Σ────────┬─►│─┬────────3│Σ───o		Needs very fast-switching diodes to work ideally
+		3│Σ		   │    │		 3│Σ			
+		3│Σ		   ─    ▼		 3│Σ			Use something like a schottky diode
+	In	3│Σ──────┐ ▲    ─ ┌──────3│Σ  Out
+		3│Σ		 │ │    │ │		 3│Σ
+		3│Σ		 │ ├─│◄─┤ │		 3│Σ
+	o───3│Σ──────<─<────┘┌<──────3│Σ───o
+				 │ └─────┘│
+				 │		  │
+				 │		  │
+				 o Driver o
+				
+	
+	This requires that the 
+	
+	
+	This has the effect of modulating the input by the carrier, sort of like multiplying by the carrier if it swung between 0 and 1
+	
+	
+		┌───┐	┌───┐	┌───┐	┌───┐							    /					/\
+		│	│	│	│	│	│	│	│							   /│			\		│ \	
+		│	│	│	│	│	│	│	│							  /	│	 	/	│\		│  \
+		│	│	│	│	│	│	│	│							 /	│	\  /│	│ \		│	\
+	    ┘	└───┘	└───┘	└───┘	└							/	└───┘\/	└───┘  \/───┘	└		This changes based on which is the 
+	──────────────────────────────────────      Produces    ──────────────────────────────────────	input/driver and their relative frequencies
+
+			/\		  /\		/\
+		   /  \		 /	\	   /  \
+		  /    \	/	 \	  /	   \
+		 /		\  /	  \	 /		\
+		/		 \/		   \/		 \
+	──────────────────────────────────────

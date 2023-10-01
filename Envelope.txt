@@ -1,0 +1,367 @@
+	┌────────────────┐
+════╡General Overview╞═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+	└────────────────┘
+
+
+
+General overview:
+
+
+	The SID can be broken into a number of sections as shown:
+	
+	
+	
+	┌──────────┐Saw		┌────────┐
+	│		   ├────────┤		 │
+	│		   │Pulse	│  Wave	 │							┌───────┐
+	│		   ├────────┤ Select │Analogue	┌────────┐		│C-Mixer│
+	│Oscillator│Tri		│        ├──────────┤Envelope├─╥──╥─┤	&	╞═══════>Audio Out
+	│		   ├────────┤	+	 │Signal	└────────┘ ║  ║ │Filters│
+	│		   │Noise	│  DAC   │					   ║  ║	└───────┘
+	│		   ├────────┤		 │					      ║
+	└─╥──────╥─┘		└────────┘					  Ch2 
+	  ║		 ║ 											 Ch3
+	  ║		 ║
+	
+	Ring	Sync
+	
+	
+	For clarity, only one voice is shown. All three go through the same mixer / filter
+	
+	
+	┌────────────────┐
+════╡Envelope Section╞═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+	└────────────────┘	
+	
+
+	The Envelope is bad. I will (try to) make a better one ☺
+	
+	
+	
+	The envelope needs ADSR (could add more, but that's complicated...) and a gate
+	
+	On the rising edge of Gate, the ADSR sequence will start, then hold at Sustain until the falling edge
+	
+	ADSR should each be 4 - 8 bits
+	
+	Before counting up, reset Counter to $00
+	
+	On G↑, count to $FF, clocked by value of A
+	
+	On $FF, count down by D
+
+	When Count = S, halt until G↓
+	
+	On G↓, count to $00, clocked by value of R
+	
+	
+	
+	Block Diagram:
+
+
+	┌───────┐  ┌───────┐	2-bits to show which part they envelope is on:
+	│ ADSR  │  │ ADSR  │		┌──────┬─────────┬─────────┬───────┐
+	│ Speed │  │ State │		│Value │State    │Direction│Clock? │
+	└───┬───┘  └───┬───┘        ├──────┼─────────┼─────────┼───────┤
+	    ↓          ↓			│  00  │ Attack  │   Up    │   1   │
+  Speed └─┐      ┌─┘ Direction	│  01  │ Decay   │  Down   │   1   │
+	      │      │              │  10  │ Sustain │  Halt   │   0   │
+		 ┌┴──────┴┐             │  11  │ Release │  Down   │   1   │
+		 │        │				└──────┴─────────┴─────────┴───────┘
+		 │Envelope│ SN74LS591
+		 │Counter │
+   Reset├┤        ├────┐
+		 └────────┘	   │
+			     ┌─────┴─────┐		┌────────┐
+				 │Logarithmic│      │Filter/ │
+	Osc	├────────┤			 ├──────┤        │
+				 │	  DAC    │		│Stage   │
+				 └───────────┘		└────────┘
+
+
+	
+	
+	
+	To make a nice sounding envelope, you need to have non-linear A, D and R
+	
+	^
+	│▌ 			This is more
+	│▌			like how
+	││			human hearing
+	││			works in
+	││			practise
+	││
+	│▐
+	│▐
+	│ ▌
+	│ ▌
+	│ ▐
+	│ ▐
+	│  ▌
+	│  ▐
+	│   \
+	│	 ▀▄
+	│      ▀▀▄▄
+	│          ▀▀────▄▄
+   ─┼──────────────────>
+	│
+
+
+	This will shape the wave like so:
+	
+	 │
+Max	─┤         \
+	 │         ▌▌
+	 │         ▌▌
+	 │         ▌▌
+	 │        ▐|▐
+	 │        ▐|▐______________
+	 │        │| |             │  
+	 │        ▌| |             ▐
+	 │      _/ | |             |\_
+	 │__▄▄─▀   | |             |  ▀─▄▄____  
+	─┼────────────────────────────────────>
+     │         │ │             │
+	 │Attack   │ │Sustain      │Release
+               │Decay
+
+	The values of A, D and R affect how quickly each will follow the curve
+	
+	The valus of sustain will affect the height of the shelf.
+	
+	The Decay / Release section uses the same logarithmic curve, just halted at sustain.
+
+
+
+	To do this, I will use a logarithmic DAC setup:
+	
+	
+	This is configured for constant input resistance ↓
+	
+	
+					Bit 0	  Bit 1     Bit 2            Bit 7
+					  ┬			┬		  ┬				   ┬
+					  │			│		  │				   │
+		Osc	────┬─/\/─┼───┬─/\/─┼───┬─/\/─┼─         ┬─/\/─┼─────────┬───o Out
+				│     /   │     /   │     /			 │     /		 │
+				└────/ o  └────/ o  └────/ o		 └────/ o		 │
+					   │	     │ 	       │ ─ ─ ─ ─        │  ┌─/\/─┘
+				┌─/\/──┘  ┌─/\/──┘  ┌─/\/──┘		 ┌─/\/──┘  │  
+				│		  │		    │				 │		   │
+		Gnd	────┴─────────┴─────────┴───────		 ┴─────────┴─────────o Gnd
+
+
+	
+		Gain at each stage must be 2x the last:
+		
+		dB(Stage i+1) = 2 * dB(Stage i)
+		
+		V Gain / dB = 20 * log(V out / V in),
+
+		Calculator for the resistor values (and layout): http://www.vaneijndhoven.net/jos/attenuator-calculator/index.html
+	
+	
+		An first-stage attenuation of 0.75 dB provides good accuracy and a final attenuation of -192.9 dB with a maximum stage-error of +0.38 dB.
+	
+
+
+	State Logic:
+
+↑ ↓ → ←
+
+░ ▒ ▓ █
+
+▀ ▄ ▌▐ ▬
+
+║ │ ═ ─
+
+╣ ╢ ╡ ┤
+
+╠ ╟ ╞ ├
+
+╗ ╖ ╕ ┐
+
+╝ ╜ ╛ ┘
+
+╔ ╓ ╒ ┌
+
+╚ ╙ ╘ └
+
+╦ ╥ ╤ ┬
+
+╩ ╨ ╧ ┴
+
+╬ ╫ ╪ ┼
+	
+	    ─       ─
+	A	A	B	B
+	│	│	│	│   ┌──▄_
+	│	O───────────┤    \									─   ─
+	│	│	│	│	│	 ├───O──────────────O─────────────┤ A & B
+	│	│	│	O───┤   _/   │				│
+	│	│	│	│   └──▀     │				│
+	│	│	│	│   ┌──▄_    │				│
+	│	O───────────┤    \	 │				│				─
+	│	│	│	│   │    ├───│O─────O───────│─────────────┤ A & B
+	│	│	O───────┤   _/   ││		│		│
+	│	│	│	│   └──▀     ││		│		│
+	│	│	│	│   ┌──▄_    ││		│		│
+	O───────────────┤    \	 ││		│		│				    ─
+	│	│	│	│   │    ├───││─────│───────│───────O─────┤ A & B
+	│	│	│	O───┤   _/   ││		│		│		│
+	│	│	│	│   └──▀     ││		│		│		│
+	│	│	│	│   ┌──▄_    ││		│		│		│
+	O───────────────┤    \   ││		│		│		│
+	│	│	│	│   │    ├───││O────│─O─────│───────│─────┤ A & B
+	│	│	O───────┤   _/   │││	│ │		│		│
+					└──▀     │││	│ │		│		│
+							 │││	│ │		│		│
+							 ┴┴┴	┴─┴		│		│
+							 \ /	\ /		│		│
+							  │		 │		│		│
+							  │		 │		│		│
+							  ┴		 ┴		┴		┴	
+						    Clock   Count  Count   Halt
+							  	    Down   Up
+	
+
+	
+                ─ ─   ─
+	CountDown = A.B + A.B + A.B
+
+
+
+
+	
+	Using 2x SN74LS193 as the counter:
+	
+	┌────_────┐
+	┤C1    Vcc├			
+	┤C2     C0├
+	┤C3     ¬G├
+	┤C4   RClk├
+	┤C5   ¬CEn├
+	┤C6   CClk├
+	┤C7   ¬Clr├
+	┤Gnd  ¬RCO├
+	└─────────┘
+	
+	Internally, there is the counter and an output register
+	
+	Each are clocked separately: Register = RClk; Counter = CClk
+	
+	There is a clear pin which clears the counter
+	
+	The counter has an enable pin - CEn
+	
+	
+	
+	To reset the output, pull Clr low for 1 clock and ignore current output value
+	
+	
+	
+	The state will be incremented when the counter hits certain points
+	
+	On reset, set counter and state to $00
+	
+	$00 → $FF	When C7 & C6 & C5 ... & C0
+							   ───────
+	$00 → $SS	When Counter + Sustain == 0
+
+	When Gate != 1, set State to %11
+
+
+	Timing:
+
+	┌───────┬───────┐	Original SID
+	│A / ms │DR / ms│
+	├───────┼───────┤
+	│2		│6		│
+	│8		│24		│
+	│16		│48		│
+	│24		│72		│
+	│38		│114	│
+	│56		│168	│
+	│68		│204	│
+	│80		│240	│
+	│100	│300	│
+	│250	│750	│
+	│500	│1500	│
+	│800	│2400	│
+	│1000	│3000	│
+	│3000	│9000	│
+	│5000	│15000	│
+	│8000	│24000	│
+    └───────┴───────┘
+
+	This is a good range (apparently) so I just need greater resolution
+
+
+	Since this follows a roughly exponential curve, which was approcimated with janky linear stuff.
+	
+	Its easier for me to do a purely linear approximation as shown in ADSR_Calc.ods
+	
+	
+
+	The method I'm going with is a 2-part linear approximation and a clock divider:
+
+									    Clock
+	A/D/R < 128, Clock EnvCounter @	─────────────
+									4 * (X % 128)
+
+							     Clock
+	A/D/R >= 128, clock @	────────────────
+							1024 * (X % 128)
+	
+	This gives good resolution and comparable values to the SID at low / high values, although the resolution in the middle (0.1 - 1.0 sec) is a little blocky
+	
+	
+	
+	This can be made by using 2x 8 bit counters and using either the C / 2↑2 or C / 2↑10 pins to clock another counter starting at X, going down.
+	
+	See 7440103 for a count-down chip.
+	
+	The output is also connected to the control pin to latch in the next value to count from - this is always put in the input pins:
+	
+	
+	
+			┌────_────┐
+	DivClk├─┤>     Vcc├─┤Vcc			
+	   Hi├──┤¬MR   ¬PE├─┬──┤Hi
+	    Lo├─┤¬TE   ¬TC├o┴─────────Divided Clock Out
+	   X0├──┤P0     P7├─────┤X7
+		X1├─┤P1     P6├────┤X6
+	   X2├──┤P2     P5├───┤X5
+		X3├─┤P3    ¬P4├──┤X4
+	   X4├──┤Gnd   ¬PL├─┤Hi
+			└─────────┘
+	
+
+
+
+
+↑ ↓ → ←
+
+░ ▒ ▓ █
+
+▀ ▄ ▌▐ ▬
+
+║ │ ═ ─
+
+╣ ╢ ╡ ┤
+
+╠ ╟ ╞ ├
+
+╗ ╖ ╕ ┐
+
+╝ ╜ ╛ ┘
+
+╔ ╓ ╒ ┌
+
+╚ ╙ ╘ └
+
+╦ ╥ ╤ ┬
+
+╩ ╨ ╧ ┴
+
+╬ ╫ ╪ ┼

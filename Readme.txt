@@ -4,6 +4,8 @@ Credits:
 
 Physical / Simulated circuit designs - aTan (that's me)
 
+If you want to view the .circ files, use Logisim Evolution (somewhere on GitHub)
+
 Reverse engineering efforts - Lots of people! 
 (all my knowledge has come from the libsidplayfp wiki and associated forum) Thanks guys!
 
